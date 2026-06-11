@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="crud/crud.vcxproj" Id="b186590e-7eff-49da-af6d-629af4d419df" />
+</Solution>
