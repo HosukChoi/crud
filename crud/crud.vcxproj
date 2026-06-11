@@ -155,10 +155,12 @@
 
   <ItemGroup>
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\JsonCrud.cpp" />
     <ClCompile Include="src\MemberRepository.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Member.h" />
+    <ClInclude Include="src\JsonCrud.h" />
     <ClInclude Include="src\MemberRepository.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

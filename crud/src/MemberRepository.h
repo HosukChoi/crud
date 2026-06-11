@@ -3,6 +3,7 @@
 #include <optional>
 #include <string>
 #include "Member.h"
+#include "JsonCrud.h"
 
 class MemberRepository {
 public:
@@ -22,11 +23,9 @@ public:
     bool remove(int id);
 
 private:
-    void load();
-    void save() const;
-    bool emailExists(const std::string& email, int excludeId = -1) const;
+    JsonCrud crud_;
 
-    std::string         filepath_;
-    std::vector<Member> members_;
-    int                 nextId_;
+    static Member            fromJson(const nlohmann::json& j);
+    static nlohmann::json    toJson(const Member& m);
+    bool emailExists(const std::string& email, int excludeId = -1) const;
 };
