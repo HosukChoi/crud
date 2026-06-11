@@ -155,7 +155,6 @@
 
   <ItemGroup>
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\JsonCrud.cpp" />
     <ClCompile Include="src\MemberRepository.cpp" />
   </ItemGroup>
   <ItemGroup>
