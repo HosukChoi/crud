@@ -120,12 +120,124 @@ ofs << output.dump(2) << "\n";
 ## 아키텍처
 
 ```
-main.cpp  ──→  MemberRepository  ──→  data/members.json
-              (CRUD + 파일 I/O)
-                     ↑
-                 Member.h (데이터 구조체)
+main.cpp  ──→  MemberRepository  ──→  JsonCrud<Member>  ──→  data/members.json
+              (도메인 검증)            (JSON CRUD)
+                     ↑                       ↑
+                 Member.h            to_json / from_json
+              (구조체 + ADL)
 ```
 
-- **Member**: 순수 데이터 구조체 (비즈니스 로직 없음)
-- **MemberRepository**: JSON 파일 로드/저장 + CRUD 연산, write-through 방식
+- **Member**: 데이터 구조체 + `to_json`/`from_json` ADL 직렬화 함수
+- **JsonCrud\<T\>**: 범용 JSON CRUD 템플릿 클래스 (파일 I/O, 배열 관리)
+- **MemberRepository**: 도메인 검증 (이메일 중복 등) + JsonCrud 위임
 - **main.cpp**: 콘솔 메뉴 UI, 사용자 입력 처리
+
+---
+
+## JsonCrud\<T\> 사용 가이드
+
+`src/JsonCrud.h` 하나만 포함하면 어떤 타입에도 적용 가능한 범용 JSON CRUD 클래스입니다.
+
+### 인터페이스 요약
+
+```cpp
+template<typename T>
+class JsonCrud {
+    void load(const std::string& filepath, const std::string& arrayKey);
+
+    void           create(const T& item);
+    std::vector<T> readAll() const;
+    std::vector<T> readByKey(const std::string& key, const nlohmann::json& value) const;
+    bool           update(const std::string& keyField, const nlohmann::json& keyValue,
+                          const std::string& targetField, const nlohmann::json& newValue);
+    bool           remove(const std::string& keyField, const nlohmann::json& keyValue);
+
+    int  nextId() const;
+    void bumpNextId();
+};
+```
+
+### 데이터 파일 구조
+
+```json
+{
+  "next_id": 4,
+  "<arrayKey>": [
+    { "id": 1, "field1": "...", "field2": "..." }
+  ]
+}
+```
+
+### 새 타입 추가 체크리스트
+
+새로운 도메인 타입(예: `Product`)을 JSON CRUD로 관리하려면 아래 순서로 작업합니다.
+
+**1. 구조체 + ADL 직렬화 함수 정의** (`Product.h`)
+
+```cpp
+#pragma once
+#include <string>
+#include <nlohmann/json.hpp>
+
+struct Product {
+    int         id;
+    std::string name;
+    int         price;
+};
+
+inline void to_json(nlohmann::json& j, const Product& p)
+{
+    j = nlohmann::json{{"id", p.id}, {"name", p.name}, {"price", p.price}};
+}
+
+inline void from_json(const nlohmann::json& j, Product& p)
+{
+    p.id    = j["id"].get<int>();
+    p.name  = j["name"].get<std::string>();
+    p.price = j["price"].get<int>();
+}
+```
+
+**2. Repository 클래스 작성** (`ProductRepository.h / .cpp`)
+
+```cpp
+// ProductRepository.h
+#include "Product.h"
+#include "JsonCrud.h"
+
+class ProductRepository {
+public:
+    explicit ProductRepository(const std::string& filepath);
+    bool                  create(Product& p);
+    std::vector<Product>  findAll() const;
+    std::optional<Product> findById(int id) const;
+    bool                  update(const Product& p);
+    bool                  remove(int id);
+private:
+    JsonCrud<Product> crud_;
+};
+
+// ProductRepository.cpp
+ProductRepository::ProductRepository(const std::string& filepath)
+{
+    crud_.load(filepath, "products");  // arrayKey를 타입에 맞게 지정
+}
+```
+
+**3. vcxproj에 파일 등록**
+
+```xml
+<ClCompile Include="src\ProductRepository.cpp" />
+<ClInclude Include="src\Product.h" />
+<ClInclude Include="src\ProductRepository.h" />
+```
+
+### 기존 구현 참조
+
+`Member` 타입이 완성된 구현 예시입니다. 새 타입 작업 시 참고하세요.
+
+| 파일 | 역할 |
+|------|------|
+| `src/Member.h` | 구조체 + to_json/from_json 패턴 |
+| `src/MemberRepository.h/.cpp` | Repository 패턴 (도메인 검증 포함) |
+| `data/members.json` | 데이터 파일 구조 |
