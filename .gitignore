@@ -3,6 +3,9 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+# Scratch / temporary workspace (로컬 전용, 커밋하지 않음)
+tmp/
+
 # Third-party headers (download separately — see CLAUDE.md)
 **/include/nlohmann/json.hpp
 
