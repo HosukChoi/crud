@@ -5,6 +5,7 @@
 #include <iostream>
 #include <algorithm>
 #include <nlohmann/json.hpp>
+#include "ICrud.h"
 
 // JSON 파일 기반 범용 CRUD 템플릿 클래스.
 // T는 nlohmann ADL 직렬화 함수를 제공해야 합니다:
@@ -13,10 +14,10 @@
 //
 // 파일 구조: { "next_id": N, "<arrayKey>": [ {...}, ... ] }
 template<typename T>
-class JsonCrud {
+class JsonCrud : public ICrud<T> {
 public:
     // 파일 로드. arrayKey 는 JSON 내 배열 필드 이름 (예: "members", "products")
-    void load(const std::string& filepath, const std::string& arrayKey)
+    void load(const std::string& filepath, const std::string& arrayKey) override
     {
         filepath_ = filepath;
         arrayKey_ = arrayKey;
@@ -24,8 +25,8 @@ public:
         std::ifstream ifs(filepath_);
         if (!ifs.is_open())
         {
-            root_["next_id"]  = 1;
-            root_[arrayKey_]  = nlohmann::json::array();
+            root_["next_id"] = 1;
+            root_[arrayKey_] = nlohmann::json::array();
             return;
         }
 
@@ -33,8 +34,8 @@ public:
         catch (const nlohmann::json::parse_error& e)
         {
             std::cerr << "[JsonCrud] 파싱 오류: " << e.what() << "\n";
-            root_["next_id"]  = 1;
-            root_[arrayKey_]  = nlohmann::json::array();
+            root_["next_id"] = 1;
+            root_[arrayKey_] = nlohmann::json::array();
         }
 
         if (!root_.contains(arrayKey_) || !root_[arrayKey_].is_array())
@@ -44,7 +45,7 @@ public:
     }
 
     // Create: T → json 변환(to_json ADL) 후 배열에 추가
-    void create(const T& item)
+    void create(const T& item) override
     {
         nlohmann::json j = item;
         root_[arrayKey_].push_back(j);
@@ -52,7 +53,7 @@ public:
     }
 
     // Read: 전체 배열을 T 벡터로 반환 (from_json ADL)
-    std::vector<T> readAll() const
+    std::vector<T> readAll() const override
     {
         std::vector<T> result;
         for (const auto& j : root_[arrayKey_])
@@ -62,7 +63,7 @@ public:
 
     // Read: key == value 인 항목들을 T 벡터로 반환
     std::vector<T> readByKey(const std::string& key,
-                              const nlohmann::json& value) const
+                              const nlohmann::json& value) const override
     {
         std::vector<T> result;
         for (const auto& j : root_[arrayKey_])
@@ -73,7 +74,7 @@ public:
 
     // Update: keyField == keyValue 인 항목의 targetField 를 newValue 로 수정
     bool update(const std::string& keyField, const nlohmann::json& keyValue,
-                const std::string& targetField, const nlohmann::json& newValue)
+                const std::string& targetField, const nlohmann::json& newValue) override
     {
         bool found = false;
         for (auto& j : root_[arrayKey_])
@@ -89,7 +90,7 @@ public:
     }
 
     // Delete: keyField == keyValue 인 항목 삭제
-    bool remove(const std::string& keyField, const nlohmann::json& keyValue)
+    bool remove(const std::string& keyField, const nlohmann::json& keyValue) override
     {
         auto& arr = root_[arrayKey_];
         const auto before = arr.size();
@@ -105,8 +106,8 @@ public:
     }
 
     // next_id 관리
-    int  nextId() const   { return root_.value("next_id", 1); }
-    void bumpNextId()     { root_["next_id"] = nextId() + 1; save(); }
+    int  nextId()    const override { return root_.value("next_id", 1); }
+    void bumpNextId()      override { root_["next_id"] = nextId() + 1; save(); }
 
 private:
     void save() const

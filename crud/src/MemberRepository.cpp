@@ -1,10 +1,18 @@
 #include "MemberRepository.h"
 #include <iostream>
 
+// 프로덕션용: JsonCrud<Member> 를 내부에서 생성하고 파일 로드
 MemberRepository::MemberRepository(const std::string& filepath)
+    : owned_(std::make_unique<JsonCrud<Member>>()),
+      crud_(*owned_)
 {
-    crud_.load(filepath, "members");
+    owned_->load(filepath, "members");
 }
+
+// 테스트용: 외부에서 주입된 ICrud<Member> 를 참조
+MemberRepository::MemberRepository(ICrud<Member>& crud)
+    : crud_(crud)
+{}
 
 bool MemberRepository::create(Member& m)
 {
